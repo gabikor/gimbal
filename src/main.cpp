@@ -2,6 +2,7 @@
 #include "signal.h"
 #include "I2cPort.h"
 #include "MPU6050.h"
+#include "ramdiskWriter.h"
 
 using namespace cacaosd_i2cport;
 using namespace cacaosd_mpu6050;
@@ -12,6 +13,9 @@ int main() {
 
     ctrl = 1;
     signal(SIGINT, signal_handler);
+
+    RamdiskWriter *ramdiskWriter = new RamdiskWriter();
+    delete ramdiskWriter;
 
     I2cPort *i2c = new I2cPort(0x68, 0);
     i2c->openConnection();
