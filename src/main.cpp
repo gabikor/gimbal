@@ -3,6 +3,7 @@
 #include "I2cPort.h"
 #include "MPU6050.h"
 #include "ramdiskWriter.h"
+#include "positioningData.h"
 
 using namespace cacaosd_i2cport;
 using namespace cacaosd_mpu6050;
@@ -15,7 +16,6 @@ int main() {
     signal(SIGINT, signal_handler);
 
     RamdiskWriter *ramdiskWriter = new RamdiskWriter();
-    delete ramdiskWriter;
 
     I2cPort *i2c = new I2cPort(0x68, 0);
     i2c->openConnection();
@@ -23,30 +23,29 @@ int main() {
     MPU6050 *mpu6050 = new MPU6050(i2c);
     mpu6050->initialize();
 
-    float k = 16000;
-    int16_t *accels = (int16_t *) calloc(3, sizeof(int16_t));
-    int16_t *gyros = (int16_t *) calloc(3, sizeof(int16_t));
+    PositioningData *positioningData = new PositioningData(16000.0);
+
     while (ctrl) {
         std::cout << "MPU6050" << std::endl;
 
-        mpu6050->getAccelerations(accels);
-        std::cout << "Accel X: " << (float) accels[0] / k << std::endl;
-        std::cout << "Accel Y: " << (float) accels[1] / k << std::endl;
-        std::cout << "Accel Z: " << (float) accels[2] / k << std::endl;
+        mpu6050->getAccelerations(positioningData->getAccelDataPtr());
+        std::cout << "Accel X: " << positioningData->getAccelScaled(0) << std::endl;
+        std::cout << "Accel Y: " << positioningData->getAccelScaled(1) << std::endl;
+        std::cout << "Accel Z: " << positioningData->getAccelScaled(2) << std::endl;
 
-        mpu6050->getAngularVelocities(gyros);
-        std::cout << "Gyro X: " << (float) gyros[0] / k << std::endl;
-        std::cout << "Gyro Y: " << (float) gyros[1] / k << std::endl;
-        std::cout << "Gyro Z: " << (float) gyros[2] / k << std::endl;
+        mpu6050->getAngularVelocities(positioningData->getGyroDataPtr());
+        std::cout << "Gyro X: " << positioningData->getGyroScaled(0) << std::endl;
+        std::cout << "Gyro Y: " << positioningData->getGyroScaled(1) << std::endl;
+        std::cout << "Gyro Z: " << positioningData->getGyroScaled(2) << std::endl;
 
         std::cout << "----------------------" << std::endl;
+
+        ramdiskWriter->writeRamFile(*positioningData);
         usleep(200000);
     }
 
-    free(accels);
-    free(gyros);
     i2c->closeConnection();
-    delete i2c, mpu6050;
+    delete i2c, mpu6050, positioningData, ramdiskWriter;
 
     return 0;
 }

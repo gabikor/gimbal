@@ -105,11 +105,20 @@ namespace cacaosd_i2cport {
             msg_error("%s do not open. Address %d.", path, device_address);
             exit(1);
         }
-
-        if (ioctl(file, I2C_SLAVE, device_address) < 0) {
-            msg_error("Can not join I2C Bus. Address %d.", device_address);
-            exit(1);
+        int failed = 1;
+        int try_no = 3;
+        while (try_no-- && failed) 
+        {
+            if (ioctl(file, I2C_SLAVE, device_address) < 0) {
+                msg_error("Can not join I2C Bus. Address %d. Try no %d/3", device_address, 3-try_no);
+            } else {
+                msg_error("Joined I2C Bus. Address %d. Try no %d/3", device_address, 3-try_no);
+                failed = 0;
+            }
         }
+        if(failed)
+            exit(1);
+
 
         if (file < 0) {
             this->connection_open = false;
