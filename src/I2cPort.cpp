@@ -112,7 +112,7 @@ namespace cacaosd_i2cport {
             if (ioctl(file, I2C_SLAVE, device_address) < 0) {
                 msg_error("Can not join I2C Bus. Address %d. Try no %d/3", device_address, 3-try_no);
             } else {
-                msg_error("Joined I2C Bus. Address %d. Try no %d/3", device_address, 3-try_no);
+                printf("Joined I2C Bus. Address %d. Try no %d/3\n", device_address, 3-try_no);
                 failed = 0;
             }
         }
