@@ -4,8 +4,10 @@
 #include "MPU6050.h"
 #include "ramdiskWriter.h"
 #include "positioningData.h"
+#include "pwmGenerator.h"
 #include "gpio.h"
 #include <vector>
+#include <thread>
 
 using namespace cacaosd_i2cport;
 using namespace cacaosd_mpu6050;
@@ -13,23 +15,36 @@ using namespace nanoPi_gpio;
 
 int ctrl;
 
+std::vector<int16_t> motor1_pins {64,65,66};
+std::vector<int16_t> motor2_pins {0,2,3};
+std::vector<int16_t> motor3_pins {199,200,201};
+//std::vector<bool> pin_values {0,1,0};
+GpioHandler gpio_motor1(motor1_pins);
+GpioHandler gpio_motor2(motor2_pins);
+GpioHandler gpio_motor3(motor3_pins);
+
+void a(bool state){
+    std::vector<bool> pin_values {state,1,0};
+    gpio_motor1.writeGpioPins(pin_values);
+}
+
+void pwm_thread()
+{
+    PwmGenerator pwm(a,200);
+    
+    while (ctrl) {  
+        pwm.run(500);
+    }
+}
+
 int main() {
 
     ctrl = 1;
     signal(SIGINT, signal_handler);
 
-    std::vector<int16_t> motor1_pins {64,65,66};
-    std::vector<int16_t> motor2_pins {0,2,3};
-    std::vector<int16_t> motor3_pins {199,200,201};
-    std::vector<bool> pin_values {0,1,0};
-    GpioHandler gpio_motor1(motor1_pins);
-    GpioHandler gpio_motor2(motor2_pins);
-    GpioHandler gpio_motor3(motor3_pins);
-    gpio_motor1.writeGpioPins(pin_values);
-    gpio_motor2.writeGpioPins(pin_values);
-    gpio_motor3.writeGpioPins(pin_values);
+    std::thread pwmThread(pwm_thread);
+    pwmThread.detach();
 
-    //exit(SIGINT);
     RamdiskWriter *ramdiskWriter = new RamdiskWriter();
 
     I2cPort *i2c = new I2cPort(0x68, 0);
