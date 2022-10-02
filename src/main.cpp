@@ -5,36 +5,77 @@
 #include "ramdiskWriter.h"
 #include "positioningData.h"
 #include "pwmGenerator.h"
-#include "gpio.h"
+#include "motorControl.h"
+#include "gpio2.h"
 #include <vector>
 #include <thread>
+#include <sys/timerfd.h>
 
 using namespace cacaosd_i2cport;
 using namespace cacaosd_mpu6050;
-using namespace nanoPi_gpio;
 
 int ctrl;
+int g_speed = 30;
 
 std::vector<int16_t> motor1_pins {64,65,66};
 std::vector<int16_t> motor2_pins {0,2,3};
 std::vector<int16_t> motor3_pins {199,200,201};
-//std::vector<bool> pin_values {0,1,0};
-GpioHandler gpio_motor1(motor1_pins);
-GpioHandler gpio_motor2(motor2_pins);
-GpioHandler gpio_motor3(motor3_pins);
 
-void a(bool state){
-    std::vector<bool> pin_values {state,1,0};
-    gpio_motor1.writeGpioPins(pin_values);
+nanoPi_gpio2::GpioHandler gpio_motor1(motor1_pins);
+nanoPi_gpio2::GpioHandler gpio_motor2(motor2_pins);
+nanoPi_gpio2::GpioHandler gpio_motor3(motor3_pins);
+
+// void a(bool state){
+//     std::vector<bool> pin_values {state,1,0};
+//     gpio_motor1.writeGpioPins(pin_values);
+// }
+
+void ab1(std::vector<bool>& states){
+    gpio_motor1.writeGpioPins(states);
+}
+
+void ab2(std::vector<bool>& states){
+    gpio_motor2.writeGpioPins(states);
+}
+
+void ab3(std::vector<bool>& states){
+    gpio_motor3.writeGpioPins(states);
 }
 
 void pwm_thread()
 {
-    PwmGenerator pwm(a,200);
+    moto::MotorControl motorCtrl1(ab1);
+    //moto::MotorControl motorCtrl2(ab2);
+    //moto::MotorControl motorCtrl3(ab3);
     
     while (ctrl) {  
-        pwm.run(500);
+        motorCtrl1.runWithPwm(100);
+        // motorCtrl2.runWithPwm(g_speed);
+        // motorCtrl3.runWithPwm(-50);
     }
+    delete &gpio_motor1;
+    // delete &gpio_motor2;
+    // delete &gpio_motor3;
+}
+
+void pwm_thread2()
+{
+    moto::MotorControl motorCtrl2(ab2);
+    
+    while (ctrl) {  
+        motorCtrl2.runWithPwm(g_speed);
+    }
+    delete &gpio_motor2;
+}
+
+void pwm_thread3()
+{
+    moto::MotorControl motorCtrl3(ab3);
+    
+    while (ctrl) {  
+        motorCtrl3.runWithPwm(-50);
+    }
+    delete &gpio_motor3;
 }
 
 int main() {
@@ -44,6 +85,27 @@ int main() {
 
     std::thread pwmThread(pwm_thread);
     pwmThread.detach();
+
+        std::thread pwmThread2(pwm_thread2);
+    pwmThread2.detach();
+
+        std::thread pwmThread3(pwm_thread3);
+    pwmThread3.detach();
+
+    char a;
+    while (ctrl) {
+        std::cin >> a;
+        if('[' == a ) {
+            g_speed +=3;
+            std::cout << "speed is " << g_speed << endl;
+        }
+        if(']' == a ) {
+            g_speed -=3;
+            std::cout << "speed is " << g_speed << endl;
+        }
+
+        usleep(10000);
+    }
 
     RamdiskWriter *ramdiskWriter = new RamdiskWriter();
 
